@@ -1,0 +1,12 @@
+[submodule "oc-core"]
+	path = oc-core
+	url = https://github.com/Ride2Rail/oc-core.git
+[submodule "trias-extractor"]
+	path = trias-extractor
+	url = https://github.com/Ride2Rail/trias-extractor.git
+[submodule "incentive-provider"]
+	path = incentive-provider
+	url = https://github.com/Ride2Rail/incentive-provider.git
+[submodule "data-provider"]
+	path = data-provider
+	url = https://github.com/Ride2Rail/data-provider.git
