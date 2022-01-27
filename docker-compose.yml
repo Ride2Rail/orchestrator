@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+
+  cache:
+    container_name: cache
+    image: redis:alpine
+    volumes:
+      - ./trias-extractor/data:/data
+    entrypoint: ["redis-server", "--appendonly", "yes"]
+
+  trias-extractor:
+    container_name: trias-extractor
+    build:
+      context: ./trias-extractor/
+      dockerfile: Dockerfile.production
+    environment:
+      FLASK_ENV: production
+    depends_on:
+      - cache
+
+  oc-core:
+    container_name: oc-core
+    build: ./oc-core/oc-core/
+    environment:
+      FLASK_ENV: development
+    volumes:
+      - ./oc-core/oc-core/oc-core.py:/code/oc-core.py
+      - ./oc-core/oc-core/oc-core.conf:/code/oc-core.conf
+      - ./oc-core/oc-core/determinant_factors.py:/code/determinant_factors.py
+    depends_on:
+      - cache
+
+  incentive-provider:
+    container_name: incentive-provider
+    build: ./incentive-provider/
+    environment:
+      FLASK_ENV: development
+  
+  data-provider:
+    container_name: data-provider
+    build: ./data-provider/
+    environment:
+      FLASK_ENV: development
+
+  orchestrator:
+    container_name: orchestrator
+    build: .
+    environment:
+      FLASK_ENV: development
+    volumes:
+      - ./orchestrator.py:/code/orchestrator.py
+      - ./orchestrator.conf:/code/orchestrator.conf
+    ports:
+      - 5000:5000
+    depends_on:
+      - cache
+    links:
+      - cache
+      - trias-extractor
+      - incentive-provider
+      - data-provider
+

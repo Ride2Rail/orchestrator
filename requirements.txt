@@ -1,0 +1,6 @@
+Flask==1.1.2
+redis==3.5.3
+numpy==1.19.2
+requests==2.24.0
+aiohttp==3.7.4.post0
+-e git+https://github.com/Ride2Rail/r2r-offer-utils.git#egg=r2r_offer_utils

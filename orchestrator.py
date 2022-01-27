@@ -46,9 +46,22 @@ def handle_request():
     logger.info('Received response from trias-extractor.')
     request_id = str(trias_extractor_response['request_id'])
 
-    # call oc-core (which in turn will call feature collectors)
+    # call oc-core (which in turn will call the feature collectors)
+    logger.info('Sending GET request to oc-core...')
+    oc_core_response = requests.get(url=f'http://oc-core:5000/{request_id}')
+    logger.info('Received response from oc-core.')
 
-    # call incentive-provider and data-provider (asynchronously?)
+    # call data-provider (asynchronously?)
+    logger.info('Sending GET request to data-provider...')
+    data_provider_response = requests.get(url=f'http://data-provider:5000/{request_id}').json()
+    logger.info('Received response from data-provider.')
+    logger.info(data_provider_response)
+    
+    # call incentive-provider (asynchronously?)
+    logger.info('Sending GET request to incentive-provider...')
+    incentive_provider_response = requests.get(url=f'http://incentive-provider:5000/incentive_provider/?request_id={request_id}').json()
+    logger.info('Received response from incentive-provider.')
+    logger.info(incentive_provider_response)
 
 
     response = app.response_class(
