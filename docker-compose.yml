@@ -30,6 +30,96 @@ services:
       - ./oc-core/oc-core/determinant_factors.py:/code/determinant_factors.py
     depends_on:
       - cache
+    links:
+      - active-fc
+      - environmental-fc
+      - panoramic-fc
+      - position-fc
+      - price-fc
+      - time-fc
+      - traffic-fc
+      - tsp-fc
+      - weather-fc
+  
+  time-fc:
+    container_name: time-fc
+    build: ./oc-core/time-fc/
+    environment:
+      FLASK_ENV: development
+    depends_on:
+      - cache
+
+  weather-fc:
+    container_name: weather-fc
+    build: ./oc-core/weather-fc
+    environment:
+      FLASK_ENV: development
+    links:
+      - owm_proxy
+
+  owm_proxy:
+    container_name: owm_proxy
+    build: ./oc-core/weather-fc/owm_proxy
+    environment:
+      FLASK_ENV: development
+    depends_on:
+      - weather-fc
+
+  price-fc:
+    container_name: price-fc
+    build: ./oc-core/price-fc
+    environment:
+      FLASK_ENV: production
+    depends_on:
+      - cache
+
+  traffic-fc:
+    container_name: traffic-fc
+    build: ./oc-core/traffic-fc
+    environment:
+      FLASK_ENV: production
+    depends_on:
+      - cache
+
+  environmental-fc:
+    container_name: environmental-fc
+    build: ./oc-core/environmental-fc
+    environment:
+      FLASK_ENV: production
+    depends_on:
+      - cache
+      
+  position-fc:
+    container_name: position-fc
+    build: ./oc-core/position-fc
+    environment:
+      FLASK_ENV: production
+    depends_on:
+      - cache
+      
+  active-fc:
+    container_name: active-fc
+    build: ./oc-core/active-fc
+    environment:
+      FLASK_ENV: production
+    depends_on:
+      - cache
+      
+  tsp-fc:
+    container_name: tsp-fc
+    build: ./oc-core/tsp-fc
+    environment:
+      FLASK_ENV: production
+    depends_on:
+      - cache
+      
+  panoramic-fc:
+    container_name: panoramic-fc
+    build: ./oc-core/panoramic-fc
+    environment:
+      FLASK_ENV: development
+    depends_on:
+      - cache
 
   incentive-provider:
     container_name: incentive-provider
@@ -60,4 +150,5 @@ services:
       - trias-extractor
       - incentive-provider
       - data-provider
+      - oc-core
 

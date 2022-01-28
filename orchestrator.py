@@ -33,6 +33,11 @@ logger.setLevel(logging.INFO)
         
 @app.route('/compute', methods=['POST'])
 def handle_request():
+
+    # to add feature-collector submodules inside oc-core submodule
+    # https://stackoverflow.com/questions/4600835/adding-git-submodule-that-contains-another-submodule
+
+    # BUT FIRST COMMIT THE NEW VERSION OF oc-core.py!!!
     
     # receive the TRIAS request data
     request.get_data()
