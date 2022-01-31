@@ -30,14 +30,48 @@ TIMEOUT = float(config.get('running', 'timeout'))
 logger, ch = setup_logger()
 logger.setLevel(logging.INFO)
 
+async def call_service(session, url):
+    
+    logger.info(f'o-o-o-o-o-o-o-o Sending request: {url}... o-o-o-o-o-o-o-o')
+    try:
+        async with session.get(url) as response:
+            json_response = await response.json()
+            logger.info(f'o-o-o-o-o-o-o-o Received response from {url}. o-o-o-o-o-o-o-o')
+            return json_response
+    except asyncio.CancelledError:
+        logger.info(f'O-o-O-o-O-o-O A timeout occurred in {url}. O-o-O-o-O-o-O')
+        response = app.response_class(status=504,
+                                      mimetype='application/json')
+        return response
+    except Exception:
+        logger.info(f'X-X-X-X-X-X Something went wrong in {url}. X-X-X-X-X-X')
+        response = app.response_class(status=500,
+                                      mimetype='application/json')
+        return response
+
+
+async def send_async_requests(request_id):
+    
+    logger.info('Handling asynchronous requests.')
+    
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        tasks.append(asyncio.ensure_future(call_service(session, f'http://oc-core:5000/{request_id}')))
+        tasks.append(asyncio.ensure_future(call_service(session, f'http://data-provider:5000/{request_id}')))
+        tasks.append(asyncio.ensure_future(call_service(session, f'http://incentive-provider:5000/incentive_provider/?request_id={request_id}')))
+        try:
+            await asyncio.wait_for(asyncio.gather(*tasks), timeout=TIMEOUT)
+        except asyncio.TimeoutError:
+            for t in tasks:
+                t.cancel()
+            logger.info(f'O-o-O-o-O-o-O Timeout (after {TIMEOUT} seconds) O-o-O-o-O-o-O')
+            return
+    
+    logger.info('All requests have been handled.')
+
         
 @app.route('/compute', methods=['POST'])
 def handle_request():
-
-    # to add feature-collector submodules inside oc-core submodule
-    # https://stackoverflow.com/questions/4600835/adding-git-submodule-that-contains-another-submodule
-
-    # BUT FIRST COMMIT THE NEW VERSION OF oc-core.py!!!
     
     # receive the TRIAS request data
     request.get_data()
@@ -51,23 +85,8 @@ def handle_request():
     logger.info('Received response from trias-extractor.')
     request_id = str(trias_extractor_response['request_id'])
 
-    # call oc-core (which in turn will call the feature collectors)
-    logger.info('Sending GET request to oc-core...')
-    oc_core_response = requests.get(url=f'http://oc-core:5000/{request_id}')
-    logger.info('Received response from oc-core.')
-
-    # call data-provider (asynchronously?)
-    logger.info('Sending GET request to data-provider...')
-    data_provider_response = requests.get(url=f'http://data-provider:5000/{request_id}').json()
-    logger.info('Received response from data-provider.')
-    logger.info(data_provider_response)
-    
-    # call incentive-provider (asynchronously?)
-    logger.info('Sending GET request to incentive-provider...')
-    incentive_provider_response = requests.get(url=f'http://incentive-provider:5000/incentive_provider/?request_id={request_id}').json()
-    logger.info('Received response from incentive-provider.')
-    logger.info(incentive_provider_response)
-
+    # send asynchronous requests to oc-core, incentive-provider and data-provider
+    asyncio.run(send_async_requests(request_id))
 
     response = app.response_class(
         response=f'{{"request_id": {request_id}}}',

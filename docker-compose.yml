@@ -23,7 +23,7 @@ services:
     container_name: oc-core
     build: ./oc-core/oc-core/
     environment:
-      FLASK_ENV: development
+      FLASK_ENV: production
     volumes:
       - ./oc-core/oc-core/oc-core.py:/code/oc-core.py
       - ./oc-core/oc-core/oc-core.conf:/code/oc-core.conf
@@ -40,30 +40,38 @@ services:
       - traffic-fc
       - tsp-fc
       - weather-fc
+    logging:
+      driver: none
   
   time-fc:
     container_name: time-fc
     build: ./oc-core/time-fc/
     environment:
-      FLASK_ENV: development
+      FLASK_ENV: production
     depends_on:
       - cache
+    logging:
+      driver: none
 
   weather-fc:
     container_name: weather-fc
     build: ./oc-core/weather-fc
     environment:
-      FLASK_ENV: development
-    links:
-      - owm_proxy
+      FLASK_ENV: production
+    logging:
+      driver: none
+    #links:
+    #  - owm_proxy
 
   owm_proxy:
     container_name: owm_proxy
     build: ./oc-core/weather-fc/owm_proxy
     environment:
-      FLASK_ENV: development
+      FLASK_ENV: production
     depends_on:
       - weather-fc
+    logging:
+      driver: none
 
   price-fc:
     container_name: price-fc
@@ -72,6 +80,8 @@ services:
       FLASK_ENV: production
     depends_on:
       - cache
+    logging:
+      driver: none
 
   traffic-fc:
     container_name: traffic-fc
@@ -80,6 +90,8 @@ services:
       FLASK_ENV: production
     depends_on:
       - cache
+    logging:
+      driver: none
 
   environmental-fc:
     container_name: environmental-fc
@@ -88,6 +100,8 @@ services:
       FLASK_ENV: production
     depends_on:
       - cache
+    logging:
+      driver: none
       
   position-fc:
     container_name: position-fc
@@ -96,6 +110,8 @@ services:
       FLASK_ENV: production
     depends_on:
       - cache
+    logging:
+      driver: none
       
   active-fc:
     container_name: active-fc
@@ -104,6 +120,8 @@ services:
       FLASK_ENV: production
     depends_on:
       - cache
+    logging:
+      driver: none
       
   tsp-fc:
     container_name: tsp-fc
@@ -112,26 +130,34 @@ services:
       FLASK_ENV: production
     depends_on:
       - cache
+    logging:
+      driver: none
       
   panoramic-fc:
     container_name: panoramic-fc
     build: ./oc-core/panoramic-fc
     environment:
-      FLASK_ENV: development
+      FLASK_ENV: production
     depends_on:
       - cache
+    logging:
+      driver: none
 
   incentive-provider:
     container_name: incentive-provider
     build: ./incentive-provider/
     environment:
-      FLASK_ENV: development
+      FLASK_ENV: production
+    logging:
+      driver: none
   
   data-provider:
     container_name: data-provider
     build: ./data-provider/
     environment:
-      FLASK_ENV: development
+      FLASK_ENV: production
+    logging:
+      driver: none
 
   orchestrator:
     container_name: orchestrator
