@@ -19,11 +19,20 @@ services:
     depends_on:
       - cache
 
+  geolocation-fc:
+    container_name: geolocation-fc
+    build: ./geolocation-fc/
+    volumes:
+      - ./geolocation-fc/geolocation-fc.py:/code/geolocation-fc.py
+      - ./geolocation-fc/geolocation-fc.conf:/code/geolocation-fc.conf
+    environment:
+      FLASK_ENV: development
+
   oc-core:
     container_name: oc-core
     build: ./oc-core/oc-core/
     environment:
-      FLASK_ENV: production
+      FLASK_ENV: development
     volumes:
       - ./oc-core/oc-core/oc-core.py:/code/oc-core.py
       - ./oc-core/oc-core/oc-core.conf:/code/oc-core.conf
@@ -40,8 +49,8 @@ services:
       - traffic-fc
       - tsp-fc
       - weather-fc
-    logging:
-      driver: none
+    # logging:
+    #   driver: none
   
   time-fc:
     container_name: time-fc
@@ -148,16 +157,16 @@ services:
     build: ./incentive-provider/
     environment:
       FLASK_ENV: production
-    logging:
-      driver: none
+    #logging:
+    #  driver: none
   
   data-provider:
     container_name: data-provider
     build: ./data-provider/
     environment:
       FLASK_ENV: production
-    logging:
-      driver: none
+    #logging:
+    #  driver: none
 
   orchestrator:
     container_name: orchestrator
@@ -174,6 +183,7 @@ services:
     links:
       - cache
       - trias-extractor
+      - geolocation-fc
       - incentive-provider
       - data-provider
       - oc-core

@@ -35,16 +35,18 @@ async def call_service(session, url):
     logger.info(f'o-o-o-o-o-o-o-o Sending request: {url}... o-o-o-o-o-o-o-o')
     try:
         async with session.get(url) as response:
-            json_response = await response.json()
+            json_response = await response.json(content_type=None)
             logger.info(f'o-o-o-o-o-o-o-o Received response from {url}. o-o-o-o-o-o-o-o')
+            logger.info(json_response)
             return json_response
     except asyncio.CancelledError:
         logger.info(f'O-o-O-o-O-o-O A timeout occurred in {url}. O-o-O-o-O-o-O')
         response = app.response_class(status=504,
                                       mimetype='application/json')
         return response
-    except Exception:
+    except Exception as exc:
         logger.info(f'X-X-X-X-X-X Something went wrong in {url}. X-X-X-X-X-X')
+        logger.info(exc)
         response = app.response_class(status=500,
                                       mimetype='application/json')
         return response
@@ -57,8 +59,8 @@ async def send_async_requests(request_id):
     async with aiohttp.ClientSession() as session:
         tasks = []
         tasks.append(asyncio.ensure_future(call_service(session, f'http://oc-core:5000/{request_id}')))
-        tasks.append(asyncio.ensure_future(call_service(session, f'http://data-provider:5000/{request_id}')))
-        tasks.append(asyncio.ensure_future(call_service(session, f'http://incentive-provider:5000/incentive_provider/?request_id={request_id}')))
+        tasks.append(asyncio.ensure_future(call_service(session, f'http://data-provider:5000/?request_id={request_id}')))
+        tasks.append(asyncio.ensure_future(call_service(session, f'http://incentive-provider:5000/?request_id={request_id}')))
         try:
             await asyncio.wait_for(asyncio.gather(*tasks), timeout=TIMEOUT)
         except asyncio.TimeoutError:
@@ -69,7 +71,7 @@ async def send_async_requests(request_id):
     
     logger.info('All requests have been handled.')
 
-        
+
 @app.route('/compute', methods=['POST'])
 def handle_request():
     
@@ -84,6 +86,12 @@ def handle_request():
                                              headers={'Content-Type': 'application/xml'}).json()
     logger.info('Received response from trias-extractor.')
     request_id = str(trias_extractor_response['request_id'])
+
+    logger.info('Sending POST request to geolocation-fc...')
+    geolocation_fc_response = requests.post(url='http://geolocation-fc:5000/compute',
+                                            json={"request_id": request_id, "geo_attributes": ["start_point", "end_point", "via_locations"]},
+                                            headers={'Content-Type': 'application/json'})
+    logger.info(f'Response from geolocation-fc:{geolocation_fc_response}')
 
     # send asynchronous requests to oc-core, incentive-provider and data-provider
     asyncio.run(send_async_requests(request_id))
