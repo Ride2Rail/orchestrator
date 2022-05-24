@@ -75,7 +75,18 @@ async def send_async_requests(request_id):
         incentive_provider_response = tasks[2].result() if tasks[2].done() else {}
         return (oc_core_response, data_provider_response, incentive_provider_response)
 
-    
+
+@app.route('/train', methods=['GET'])
+def train_classifier():
+    logger.info('Sending GET request to thor-wrapper')
+    thor_response = requests.get(url='http://thor-wrapper:5000/train')
+    logger.info(f'Response from thor-wrapper: {thor_response}')
+    response = app.response_class(
+        status=200,
+        mimetype='application/json'
+    )
+    return response
+
     
 @app.route('/compute', methods=['POST'])
 def handle_request():
@@ -107,23 +118,41 @@ def handle_request():
     logger.info(f'Response from data-provider: {data_provider_response}')
     logger.info(f'Response from incentive-provider: {incentive_provider_response}')
 
-    # computation of scores and ranks (temporary)
-    scores = {}
-    for offer_id in oc_core_response:
-        scores[offer_id] = sum(oc_core_response[offer_id].values())
-    scores = {offer_id: scores[offer_id] / max(scores.values()) for offer_id in scores}
+
+    logger.info('Sending POST request to thor-wrapper...')
+    thor_response = requests.post(url='http://thor-wrapper:5000/rank',
+                                            json={"request_id": request_id},
+                                            headers={'Content-Type': 'application/json'})
+    logger.info(f'Response from thor-wrapper:{thor_response}')
+
+    if thor_response.status_code == 200:
+        offer_scores = thor_response.json()['offers']
+        logger.info(offer_scores)
+    elif oc_core_response != {}:
+        # back-up method in case of THOR failure
+        offer_scores = {}
+        for offer_id in oc_core_response:
+            offer_scores[offer_id] = sum(oc_core_response[offer_id].values())
+        offer_scores = {offer_id: offer_scores[offer_id] / max(offer_scores.values()) for offer_id in offer_scores}
+    else:
+        return app.response_class(status=500,
+                                  mimetype='application/json')
+
     ranks = {}
-    ranks = {offer_id: i for (i, offer_id) in enumerate(sorted(scores, key=scores.get, reverse=True))}
+    ranks = {offer_id: i for (i, offer_id) in enumerate(sorted(offer_scores, key=offer_scores.get, reverse=True))}
 
     # composition of the final response
-    response = {'result' : []}
+    final_result = {'result' : []}
 
     if oc_core_response != {}:
         offer_ids = oc_core_response.keys()
     elif incentive_provider_response != {}:
         offer_ids = incentive_provider_response.keys()
+    elif thor_response.status_code == 200:
+        offer_ids = offer_scores.keys()
     else:
-        return response
+        return app.response_class(status=500,
+                                  mimetype='application/json')
 
     for offer_id in offer_ids:
         offer_data = {}
@@ -139,14 +168,19 @@ def handle_request():
         else:
             offer_data['blockchain-incentives'] = {}
         
-        if ranks and scores:
-            offer_data['ranking'] = {'rank':ranks[offer_id], 'score':scores[offer_id]}
+        if ranks and offer_scores:
+            offer_data['ranking'] = {'rank':ranks[offer_id], 'score': offer_scores[offer_id]}
         else:
             offer_data['ranking'] = {}
 
-        response['result'].append(offer_data)
-        
-    return response
+        final_result['result'].append(offer_data)
+    
+    response = app.response_class(
+            response=final_result,
+            status=200,
+            mimetype='application/json'
+        )
+    return final_result
     
     
 if __name__ == '__main__':

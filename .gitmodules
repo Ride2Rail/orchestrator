@@ -13,3 +13,6 @@
 [submodule "geolocation-fc"]
 	path = geolocation-fc
 	url = https://github.com/Ride2Rail/geolocation-fc.git
+[submodule "thor-wrapper"]
+	path = thor-wrapper
+	url = https://github.com/Ride2Rail/thor-wrapper.git
