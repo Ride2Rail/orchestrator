@@ -37,7 +37,6 @@ async def call_service(session, url):
         async with session.get(url) as response:
             json_response = await response.json(content_type=None)
             logger.info(f'o-o-o-o-o-o-o-o Received response from {url}. o-o-o-o-o-o-o-o')
-            logger.info(json_response)
             return json_response
     except asyncio.CancelledError:
         logger.info(f'O-o-O-o-O-o-O A timeout occurred in {url}. O-o-O-o-O-o-O')
@@ -54,7 +53,7 @@ async def call_service(session, url):
 
 async def send_async_requests(request_id):
     
-    logger.info('Handling asynchronous requests.')
+    logger.info('Handling asynchronous requests to oc-core, data-provider and incentive-provider.')
     
     async with aiohttp.ClientSession() as session:
         tasks = []
@@ -63,15 +62,21 @@ async def send_async_requests(request_id):
         tasks.append(asyncio.ensure_future(call_service(session, f'http://incentive-provider:5000/?request_id={request_id}')))
         try:
             await asyncio.wait_for(asyncio.gather(*tasks), timeout=TIMEOUT)
+            logger.info('Asynchronous requests have been handled.')
+            #return (oc_core_response, data_provider_response, incentive_provider_response)
+            
         except asyncio.TimeoutError:
-            for t in tasks:
-                t.cancel()
+            #for t in tasks:
+            #    t.cancel()
             logger.info(f'O-o-O-o-O-o-O Timeout (after {TIMEOUT} seconds) O-o-O-o-O-o-O')
-            return
+        
+        oc_core_response = tasks[0].result() if tasks[0].done() else {}
+        data_provider_response = tasks[1].result() if tasks[1].done() else {}
+        incentive_provider_response = tasks[2].result() if tasks[2].done() else {}
+        return (oc_core_response, data_provider_response, incentive_provider_response)
+
     
-    logger.info('All requests have been handled.')
-
-
+    
 @app.route('/compute', methods=['POST'])
 def handle_request():
     
@@ -94,13 +99,53 @@ def handle_request():
     logger.info(f'Response from geolocation-fc:{geolocation_fc_response}')
 
     # send asynchronous requests to oc-core, incentive-provider and data-provider
-    asyncio.run(send_async_requests(request_id))
+    (oc_core_response, 
+    data_provider_response, 
+    incentive_provider_response) = asyncio.run(send_async_requests(request_id))
 
-    response = app.response_class(
-        response=f'{{"request_id": {request_id}}}',
-        status=200,
-        mimetype='application/json'
-    )
+    logger.info(f'Response from oc-core: {oc_core_response}')
+    logger.info(f'Response from data-provider: {data_provider_response}')
+    logger.info(f'Response from incentive-provider: {incentive_provider_response}')
+
+    # computation of scores and ranks (temporary)
+    scores = {}
+    for offer_id in oc_core_response:
+        scores[offer_id] = sum(oc_core_response[offer_id].values())
+    scores = {offer_id: scores[offer_id] / max(scores.values()) for offer_id in scores}
+    ranks = {}
+    ranks = {offer_id: i for (i, offer_id) in enumerate(sorted(scores, key=scores.get, reverse=True))}
+
+    # composition of the final response
+    response = {'result' : []}
+
+    if oc_core_response != {}:
+        offer_ids = oc_core_response.keys()
+    elif incentive_provider_response != {}:
+        offer_ids = incentive_provider_response.keys()
+    else:
+        return response
+
+    for offer_id in offer_ids:
+        offer_data = {}
+        offer_data['offer_id'] = offer_id
+
+        if oc_core_response != {}:
+            offer_data['categories'] = oc_core_response[offer_id]
+        else:
+            offer_data['categories'] = {}
+
+        if incentive_provider_response != {}:
+            offer_data['blockchain-incentives'] = incentive_provider_response['offers'][offer_id]
+        else:
+            offer_data['blockchain-incentives'] = {}
+        
+        if ranks and scores:
+            offer_data['ranking'] = {'rank':ranks[offer_id], 'score':scores[offer_id]}
+        else:
+            offer_data['ranking'] = {}
+
+        response['result'].append(offer_data)
+        
     return response
     
     
