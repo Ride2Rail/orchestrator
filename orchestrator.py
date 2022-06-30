@@ -63,11 +63,8 @@ async def send_async_requests(request_id):
         try:
             await asyncio.wait_for(asyncio.gather(*tasks), timeout=TIMEOUT)
             logger.info('Asynchronous requests have been handled.')
-            #return (oc_core_response, data_provider_response, incentive_provider_response)
             
         except asyncio.TimeoutError:
-            #for t in tasks:
-            #    t.cancel()
             logger.info(f'O-o-O-o-O-o-O Timeout (after {TIMEOUT} seconds) O-o-O-o-O-o-O')
         
         oc_core_response = tasks[0].result() if tasks[0].done() else {}
