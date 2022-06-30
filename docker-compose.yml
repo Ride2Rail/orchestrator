@@ -11,6 +11,7 @@ services:
 
   trias-extractor:
     container_name: trias-extractor
+    image: ghcr.io/ride2rail/trias-extractor
     build:
       context: ./trias-extractor/
       dockerfile: Dockerfile.production
@@ -21,22 +22,17 @@ services:
 
   geolocation-fc:
     container_name: geolocation-fc
+    image: ghcr.io/ride2rail/geolocation-fc
     build: ./geolocation-fc/
-    volumes:
-      - ./geolocation-fc/geolocation-fc.py:/code/geolocation-fc.py
-      - ./geolocation-fc/geolocation-fc.conf:/code/geolocation-fc.conf
     environment:
       FLASK_ENV: development
 
   oc-core:
     container_name: oc-core
+    image: ghcr.io/ride2rail/oc-core
     build: ./oc-core/oc-core/
     environment:
       FLASK_ENV: development
-    volumes:
-      - ./oc-core/oc-core/oc-core.py:/code/oc-core.py
-      - ./oc-core/oc-core/oc-core.conf:/code/oc-core.conf
-      - ./oc-core/oc-core/determinant_factors.py:/code/determinant_factors.py
     depends_on:
       - cache
     links:
@@ -49,127 +45,119 @@ services:
       - traffic-fc
       - tsp-fc
       - weather-fc
-    # logging:
-    #   driver: none
   
   time-fc:
     container_name: time-fc
+    image: ghcr.io/ride2rail/time-fc
     build: ./oc-core/time-fc/
     environment:
       FLASK_ENV: production
     depends_on:
       - cache
-    logging:
-      driver: none
 
   weather-fc:
     container_name: weather-fc
+    image: ghcr.io/ride2rail/weather-fc
     build: ./oc-core/weather-fc
     environment:
       FLASK_ENV: production
-    logging:
-      driver: none
-    #links:
-    #  - owm_proxy
 
   owm_proxy:
     container_name: owm_proxy
+    image: ghcr.io/ride2rail/owm_proxy
     build: ./oc-core/weather-fc/owm_proxy
     environment:
       FLASK_ENV: production
     depends_on:
       - weather-fc
-    logging:
-      driver: none
 
   price-fc:
     container_name: price-fc
+    image: ghcr.io/ride2rail/price-fc
     build: ./oc-core/price-fc
     environment:
       FLASK_ENV: production
     depends_on:
       - cache
-    logging:
-      driver: none
 
   traffic-fc:
     container_name: traffic-fc
+    image: ghcr.io/ride2rail/traffic-fc
     build: ./oc-core/traffic-fc
     environment:
       FLASK_ENV: production
     depends_on:
       - cache
-    logging:
-      driver: none
 
   environmental-fc:
     container_name: environmental-fc
+    image: ghcr.io/ride2rail/environmental-fc
     build: ./oc-core/environmental-fc
     environment:
       FLASK_ENV: production
     depends_on:
       - cache
-    logging:
-      driver: none
       
   position-fc:
     container_name: position-fc
+    image: ghcr.io/ride2rail/position-fc
     build: ./oc-core/position-fc
     environment:
       FLASK_ENV: production
     depends_on:
       - cache
-    logging:
-      driver: none
       
   active-fc:
     container_name: active-fc
+    image: ghcr.io/ride2rail/active-fc
     build: ./oc-core/active-fc
     environment:
       FLASK_ENV: production
     depends_on:
       - cache
-    logging:
-      driver: none
       
   tsp-fc:
     container_name: tsp-fc
+    image: ghcr.io/ride2rail/tsp-fc
     build: ./oc-core/tsp-fc
     environment:
       FLASK_ENV: production
     depends_on:
       - cache
-    logging:
-      driver: none
       
   panoramic-fc:
     container_name: panoramic-fc
+    image: ghcr.io/ride2rail/panoramic-fc
     build: ./oc-core/panoramic-fc
     environment:
       FLASK_ENV: production
     depends_on:
       - cache
-    logging:
-      driver: none
 
   incentive-provider:
     container_name: incentive-provider
+    image: ghcr.io/ride2rail/incentive-provider
     build: ./incentive-provider/
     environment:
       FLASK_ENV: production
-    #logging:
-    #  driver: none
   
   data-provider:
     container_name: data-provider
+    image: ghcr.io/ride2rail/data-provider
     build: ./data-provider/
     environment:
       FLASK_ENV: production
-    #logging:
-    #  driver: none
+  
+  thor-wrapper:
+    container_name: thor-wrapper
+    image: ghcr.io/ride2rail/thor-wrapper
+    build: ./thor-wrapper/
+    environment:
+      FLASK_ENV: development
 
   orchestrator:
     container_name: orchestrator
+    image: ghcr.io/ride2rail/orchestrator
     build: .
     environment:
       FLASK_ENV: development
@@ -186,5 +174,10 @@ services:
       - geolocation-fc
       - incentive-provider
       - data-provider
+      - thor-wrapper
       - oc-core
-
+networks:                                
+  default:                               
+    driver: bridge                       
+    driver_opts:                         
+        com.docker.network.driver.mtu: 1450
