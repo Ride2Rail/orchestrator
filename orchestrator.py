@@ -124,7 +124,6 @@ def handle_request():
 
     if thor_response.status_code == 200:
         offer_scores = thor_response.json()['offers']
-        logger.info(offer_scores)
     elif oc_core_response != {}:
         # back-up method in case of THOR failure
         offer_scores = {}
@@ -135,8 +134,16 @@ def handle_request():
         return app.response_class(status=500,
                                   mimetype='application/json')
 
-    ranks = {}
-    ranks = {offer_id: i for (i, offer_id) in enumerate(sorted(offer_scores, key=offer_scores.get, reverse=True))}
+    offer_scores = {offer_id: round(offer_scores[offer_id], 2) for offer_id in offer_scores}
+
+    logger.info(f'Scores from THOR: {offer_scores}')
+    offer_scores_quick = {offer_id: oc_core_response[offer_id]['quick'] for offer_id in oc_core_response}
+    logger.info(f'Quick scores: {offer_scores_quick}')
+
+    offer_ids = list(offer_scores.keys())
+    ranks = {offer_id: i 
+            for (i, offer_id) in enumerate(sorted(offer_ids, key = lambda x : (offer_scores.get(x), offer_scores_quick.get(x)), reverse=True))}
+    
 
     # composition of the final response
     final_result = {'result' : []}
